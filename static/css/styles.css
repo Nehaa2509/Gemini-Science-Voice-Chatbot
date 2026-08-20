@@ -143,6 +143,86 @@
   --shadow-glow: 0 0 25px rgba(244, 146, 74, 0.25);
 }
 
+[data-theme="claude"] {
+  --bg-primary: #faf9f5;
+  --bg-secondary: #f0eee6;
+  --bg-tertiary: #e8e5db;
+  --bg-translucent: rgba(250, 249, 245, 0.9);
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f4ee;
+  --bg-input: #ffffff;
+
+  --border-subtle: rgba(60, 50, 40, 0.1);
+  --border-glow: rgba(204, 120, 92, 0.3);
+  --border-focus: rgba(204, 120, 92, 0.6);
+
+  --text-primary: #2d2419;
+  --text-secondary: #6b5d4f;
+  --text-muted: #9c8f7f;
+
+  --accent-primary: #cc785c;
+  --accent-secondary: #b3654f;
+  --accent-gradient: linear-gradient(135deg, #cc785c 0%, #b3654f 100%);
+  --accent-glow: rgba(204, 120, 92, 0.15);
+
+  --bubble-user-bg: #f0eee6;
+  --bubble-user-text: #2d2419;
+  --bubble-bot-bg: transparent;
+  --bubble-bot-border: transparent;
+
+  --success: #5a8a6b;
+  --warning: #cc9a5c;
+  --danger: #c25f52;
+
+  --shadow-sm: 0 1px 2px rgba(45, 36, 25, 0.06);
+  --shadow-md: 0 2px 8px rgba(45, 36, 25, 0.08);
+  --shadow-glow: none;
+}
+
+/* Claude Theme: Minimalist overrides */
+[data-theme="claude"] .ambient-glow {
+  display: none !important;
+}
+
+[data-theme="claude"] .message-row.bot .msg-bubble {
+  background: none;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-theme="claude"] .message-row.bot .msg-avatar {
+  background: rgba(204, 120, 92, 0.15);
+  color: #cc785c;
+  box-shadow: none;
+}
+
+[data-theme="claude"] .msg-bubble {
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+[data-theme="claude"] .messages-list,
+[data-theme="claude"] .prompt-grid,
+[data-theme="claude"] .input-box-wrapper,
+[data-theme="claude"] .typing-indicator-row,
+[data-theme="claude"] .error-message-row {
+  max-width: 720px;
+}
+
+[data-theme="claude"] .logo-orb {
+  background: rgba(204, 120, 92, 0.15);
+  box-shadow: none;
+  color: #cc785c;
+}
+
+[data-theme="claude"] .speaking-pulse-ring {
+  display: none;
+}
+
+
 [data-theme="light"] {
   --bg-primary: #f1f5f9;
   --bg-secondary: #ffffff;
@@ -1697,6 +1777,7 @@ body {
 .aurora-dot { background: linear-gradient(135deg, #10b981, #06b6d4); }
 .sunset-dot { background: linear-gradient(135deg, #f97316, #ef4444); }
 .mimi-dot { background: linear-gradient(135deg, #fbdcb2, #f4924a, #c87878, #7c4f66); }
+.claude-dot { background: linear-gradient(135deg, #faf9f5 0%, #f0eee6 40%, #cc785c 70%, #b3654f 100%); }
 .light-dot { background: linear-gradient(135deg, #0284c7, #6366f1); }
 
 .modal-footer {

@@ -18,8 +18,8 @@ A state-of-the-art AI Assistant built with **FastAPI**, **Google Gemini**, **Web
 * ✍️ **Aria • Creative Muse**: Immersive world-builder, scriptwriter, and poet for storytelling and creative brainstorming.
 * ⚡ **Aether • Universal Genius**: Razor-sharp strategic reasoning, first-principles analysis, and comprehensive knowledge.
 
-### 🎨 Glassmorphism & Cyberpunk Design System
-* **6 Dynamic Themes**: Dark Neon (Cyan/Indigo), Cyberpunk (Pink/Purple), Aurora (Emerald/Teal), Amber Sunset, Mimi (Cream/Orange/Rose/Plum sunset palette), and Clean Light.
+### 🎨 Glassmorphism & Minimalist Design System
+* **7 Dynamic Themes**: Dark Neon (Cyan/Indigo), Cyberpunk (Pink/Purple), Aurora (Emerald/Teal), Amber Sunset, Mimi (Cream/Orange/Rose/Plum sunset palette), Minimal Warm (Claude-inspired warm neutral), and Clean Light.
 * **Ambient Lighting & Micro-Interactions**: Translucent frosted panels with `backdrop-filter`, glowing accents, smooth hover transitions, and keyboard shortcuts (`Alt+N` for New Chat, `Enter` to Send).
 * **Rich Markdown Formatting**: Formatted headings, tables, blockquotes, bullet points, and KaTeX mathematical formulas ($E=mc^2$).
 * **Syntax-Highlighted Code Blocks**: Highlighted with `highlight.js`, complete with language tags and 1-click clipboard copy.
