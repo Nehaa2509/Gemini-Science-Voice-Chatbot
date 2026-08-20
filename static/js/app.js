@@ -1387,7 +1387,7 @@ function setupEventListeners() {
   });
 
   // Cycle theme button
-  const themes = ["neon", "cyberpunk", "aurora", "sunset", "light"];
+  const themes = ["neon", "cyberpunk", "aurora", "sunset", "mimi", "light"];
   elements.themePickerBtn.onclick = () => {
     const nextIdx = (themes.indexOf(AppState.theme) + 1) % themes.length;
     applyTheme(themes[nextIdx]);

@@ -1,4 +1,4 @@
-# 🌌 Aether AI • Next-Generation Multimodal Voice & Text Chatbot
+# ✨ MIMI • Next-Generation Multimodal Voice & Text Chatbot
 
 A state-of-the-art AI Assistant built with **FastAPI**, **Google Gemini**, **Web Speech Recognition**, **Audio Visualizers**, and a modern **Glassmorphism UI/UX Design System**.
 
@@ -19,7 +19,7 @@ A state-of-the-art AI Assistant built with **FastAPI**, **Google Gemini**, **Web
 * ⚡ **Aether • Universal Genius**: Razor-sharp strategic reasoning, first-principles analysis, and comprehensive knowledge.
 
 ### 🎨 Glassmorphism & Cyberpunk Design System
-* **5 Dynamic Themes**: Dark Neon (Cyan/Indigo), Cyberpunk (Pink/Purple), Aurora (Emerald/Teal), Sunset (Amber/Orange), and Clean Light.
+* **6 Dynamic Themes**: Dark Neon (Cyan/Indigo), Cyberpunk (Pink/Purple), Aurora (Emerald/Teal), Amber Sunset, Mimi (Cream/Orange/Rose/Plum sunset palette), and Clean Light.
 * **Ambient Lighting & Micro-Interactions**: Translucent frosted panels with `backdrop-filter`, glowing accents, smooth hover transitions, and keyboard shortcuts (`Alt+N` for New Chat, `Enter` to Send).
 * **Rich Markdown Formatting**: Formatted headings, tables, blockquotes, bullet points, and KaTeX mathematical formulas ($E=mc^2$).
 * **Syntax-Highlighted Code Blocks**: Highlighted with `highlight.js`, complete with language tags and 1-click clipboard copy.

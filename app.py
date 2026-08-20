@@ -196,7 +196,7 @@ def generate_fallback_demo_response(message: str, persona: str) -> str:
         "general": "Aether (Universal Genius)"
     }.get(persona, "AI Assistant")
 
-    return f"""### 🚀 Welcome to Aether AI!
+    return f"""### 🚀 Welcome to MIMI!
 
 I received your prompt: **"{message}"**
 
@@ -218,7 +218,7 @@ Here is a sample answer to showcase formatting and voice playback:
 ```python
 # Real-time Voice AI Engine
 def explore_future():
-    print("Welcome to next-gen conversational AI!")
+    print("Welcome to MIMI — next-gen conversational AI!")
     return {{"status": "ready", "powered_by": "Gemini 1.5 Flash"}}
 
 explore_future()
