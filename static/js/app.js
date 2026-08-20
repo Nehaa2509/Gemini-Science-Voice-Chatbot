@@ -15,7 +15,7 @@ const AppState = {
   voiceRate: parseFloat(localStorage.getItem("aether_voice_rate") || "1.0"),
   voicePitch: parseFloat(localStorage.getItem("aether_voice_pitch") || "1.0"),
   autoVoice: localStorage.getItem("aether_auto_voice") !== "false", // default true
-  theme: localStorage.getItem("aether_theme") || "neon",
+  theme: localStorage.getItem("aether_theme") || "mimi",
   customPrompt: localStorage.getItem("aether_custom_prompt") || "",
   isStreaming: false,
   isRecording: false,
