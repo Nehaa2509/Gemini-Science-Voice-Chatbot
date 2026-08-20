@@ -39,28 +39,37 @@ Make sure you have Python 3.10+ installed. Install the required packages:
 pip install -r requirements.txt
 ```
 
-### 2. (Optional) Configure Gemini API Key
-You can add your free Google Gemini API key in a `.env` file in the root directory:
+### 2. Configure Gemini API Key
+Create a `.env` file in the project root with your free Google Gemini API key
+([get one from Google AI Studio](https://aistudio.google.com/app/apikey)):
 ```env
 API_KEY=your_gemini_api_key_here
 ```
-*(Or simply open the web app, click **⚙️ Settings**, and paste your API key directly in the UI!)*
+*(You can also paste the key directly in the web UI via **⚙️ Settings**.)*
 
-### 3. Start the Application
-Run the FastAPI web server:
+---
+
+### Entry Points
+
+There are **two ways** to run this project — pick one:
+
+#### 🌐 Web App (recommended)
+Starts the full FastAPI server with the Glassmorphism UI, voice visualizer, multi-persona chat, and TTS:
 ```bash
 python app.py
 ```
-or with Uvicorn:
+or equivalently:
 ```bash
 uvicorn app:app --host 127.0.0.1 --port 8000 --reload
 ```
+Then open **http://127.0.0.1:8000** in your browser.
 
-### 4. Open in Your Browser
-Navigate to:
+#### 🖥️ CLI Demo (terminal-only)
+A minimal terminal-based chat with text-to-speech via pygame. Useful for quick testing without a browser:
+```bash
+python cli_demo.py
 ```
-http://127.0.0.1:8000
-```
+> **Note:** `cli_demo.py` requires `pygame` (included in `requirements.txt`). It uses `API_KEY` / `GEMINI_API_KEY` from your `.env` — no UI settings panel.
 
 ---
 

@@ -39,10 +39,18 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Enable CORS for all origins
+# CORS: restrict to local dev origins.
+# SECURITY: If you deploy this publicly, replace these with your real frontend
+# domain(s), e.g. ["https://yourdomain.com"]. Leaving this as ["*"] combined
+# with the server-side API key fallback in get_effective_api_key() would allow
+# any website to burn your Gemini quota through this backend.
+ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,7 +101,15 @@ class TTSRequest(BaseModel):
 
 
 def get_effective_api_key(client_key: Optional[str] = None) -> Optional[str]:
-    """Retrieve API key from client header/request or server .env."""
+    """Retrieve API key from client header/request, or fall back to the server's own key.
+
+    SECURITY NOTE: The server-key fallback means any caller who omits the
+    X-Gemini-Api-Key header will silently use YOUR API key and consume YOUR
+    quota. This is fine for a local personal demo, but if you expose this
+    server publicly you should either:
+      - Remove the fallback and require a client-supplied key on every request, OR
+      - Add per-IP rate-limiting (e.g. slowapi) before deploying.
+    """
     if client_key and client_key.strip():
         return client_key.strip()
     return os.getenv("API_KEY") or os.getenv("GEMINI_API_KEY")
