@@ -1888,3 +1888,251 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================= Mobile: Floating Audio Bar Fix (<400px) ================= */
+/* At very narrow viewports the absolute-positioned bar overlaps the input.   */
+/* Switch to fixed + safe-area-inset to clear the on-screen keyboard.         */
+@media (max-width: 400px) {
+  .floating-audio-bar {
+    position: fixed;
+    bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    transform: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .input-arena {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Hide secondary nav buttons to prevent nav bar overflow */
+  #exportChatBtn,
+  #clearCurrentChatBtn {
+    display: none;
+  }
+}
+
+/* ================= WCAG AA: Light Theme Text Contrast Fix ================= */
+/* --text-muted on white (#94a3b8) = 2.5:1 — fails WCAG AA for body text.    */
+/* Bump to #6b7280 which yields ≈4.6:1 contrast on white backgrounds.        */
+[data-theme="light"] {
+  --text-muted: #6b7280;
+}
+
+/* ================= History Search Input ================= */
+.history-search-wrap {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.history-search-icon {
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.history-search-input {
+  width: 100%;
+  padding: 0.45rem 0.75rem 0.45rem 2rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.history-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.history-search-input:focus {
+  border-color: var(--border-focus);
+}
+
+/* ================= Error Message Card ================= */
+.error-message-row {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  animation: messageSlideIn 0.3s ease;
+}
+
+.error-card {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.error-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.error-card-header i {
+  font-size: 0.9rem;
+}
+
+.error-dismiss-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color var(--transition-fast);
+}
+
+.error-dismiss-btn:hover {
+  color: var(--danger);
+}
+
+.error-card-msg {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.error-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  align-self: flex-start;
+}
+
+.error-retry-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--danger);
+}
+
+/* ================= Demo Mode Banner ================= */
+.demo-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.9rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: #d97706;
+  margin-bottom: 0.85rem;
+}
+
+.demo-mode-banner i {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.demo-mode-banner a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
+.demo-banner-dismiss {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #d97706;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.demo-banner-dismiss:hover {
+  opacity: 1;
+}
+
+/* ================= Test Connection Button ================= */
+.api-test-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.test-connection-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.test-connection-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+}
+
+.test-connection-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.api-test-result {
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.api-test-result.success {
+  color: var(--success);
+}
+
+.api-test-result.error {
+  color: var(--danger);
+}
+
+/* ================= Regenerate Response Button ================= */
+.regenerate-btn {
+  color: var(--text-muted) !important;
+}
+
+.regenerate-btn:hover {
+  color: var(--accent-primary) !important;
+}
+

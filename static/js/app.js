@@ -22,6 +22,7 @@ const AppState = {
   isPlayingAudio: false,
   currentAudioObject: null,
   currentUtterance: null,
+  lastUserPrompt: "", // stored for retry-on-error
 };
 
 // Persona Configurations
@@ -320,6 +321,33 @@ function stopSimulatedVisualizer() {
   drawIdleVisualizer(ctx, canvas.width, canvas.height);
 }
 
+// ================= Thinking State =================
+const _THINKING_MSGS = [
+  "{name} is thinking...",
+  "{name} is synthesizing...",
+  "{name} is crafting a response...",
+  "{name} is analysing your question...",
+];
+
+function showThinkingState() {
+  const p = PERSONAS[AppState.activePersona] || PERSONAS.general;
+  // Update avatar icon to match active persona
+  const avatarIcon = document.getElementById("typingAvatarIcon");
+  if (avatarIcon) avatarIcon.className = `fa-solid ${p.icon}`;
+  // Randomise thinking text
+  const tmpl = _THINKING_MSGS[Math.floor(Math.random() * _THINKING_MSGS.length)];
+  elements.typingText.textContent = tmpl.replace("{name}", p.shortName);
+  elements.typingIndicator.classList.remove("hidden");
+  startSimulatedVisualizer();
+  elements.speakingPulseRing.classList.add("active");
+}
+
+function hideThinkingState() {
+  elements.typingIndicator.classList.add("hidden");
+  stopSimulatedVisualizer();
+  elements.speakingPulseRing.classList.remove("active");
+}
+
 // ================= Text-to-Speech (TTS) =================
 function speakText(text, onEndCallback) {
   stopAllAudio();
@@ -601,14 +629,27 @@ function clearAllHistory() {
   }
 }
 
-function renderSidebarHistory() {
+function renderSidebarHistory(filterQuery = "") {
   const container = elements.chatHistoryList;
   container.innerHTML = "";
 
-  const chatEntries = Object.values(AppState.chats).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
+  let chatEntries = Object.values(AppState.chats).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // Apply search filter
+  if (filterQuery) {
+    const q = filterQuery.toLowerCase();
+    chatEntries = chatEntries.filter(chat => {
+      const titleMatch = (chat.title || "").toLowerCase().includes(q);
+      const contentMatch = (chat.messages || []).some(m =>
+        (m.content || "").toLowerCase().includes(q)
+      );
+      return titleMatch || contentMatch;
+    });
+  }
+
   if (chatEntries.length === 0) {
-    container.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); padding:0.5rem 0.75rem;">No recent chats</div>`;
+    const msg = filterQuery ? "No matching conversations" : "No recent chats";
+    container.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); padding:0.5rem 0.75rem;">${msg}</div>`;
     return;
   }
 
@@ -624,7 +665,7 @@ function renderSidebarHistory() {
         <i class="fa-solid ${personaInfo.icon}"></i>
         <span>${escapeHtml(chat.title || "Conversation")}</span>
       </div>
-      <button class="history-delete-btn" title="Delete chat" onclick="deleteChat('${chat.id}', event)">
+      <button class="history-delete-btn" title="Delete chat" aria-label="Delete chat" onclick="deleteChat('${chat.id}', event)">
         <i class="fa-solid fa-trash"></i>
       </button>
     `;
@@ -775,6 +816,9 @@ async function handleSendMessage() {
   const text = elements.messageInput.value.trim();
   if (!text) return;
 
+  // Store for error-card retry
+  AppState.lastUserPrompt = text;
+
   // Clear input
   elements.messageInput.value = "";
   elements.messageInput.style.height = "auto";
@@ -786,16 +830,14 @@ async function handleSendMessage() {
   }
 
   const currentChat = AppState.chats[AppState.activeChatId];
-  
-  // Update Title if it's the first message
+
+  // Update title on first message
   if (currentChat.messages.length === 0) {
     currentChat.title = text.length > 30 ? text.substring(0, 30) + "..." : text;
   }
 
-  // Hide welcome screen
+  // Hide welcome screen, append user message
   elements.welcomeScreen.classList.add("hidden");
-
-  // Append user message
   const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   currentChat.messages.push({ role: "user", content: text, time: now });
   appendMessageElement("user", text, now);
@@ -803,12 +845,11 @@ async function handleSendMessage() {
   renderSidebarHistory();
   scrollToBottom();
 
-  // Show typing / streaming indicator
-  elements.typingIndicator.classList.remove("hidden");
+  // Show persona-aware thinking animation
+  showThinkingState();
   AppState.isStreaming = true;
   elements.sendBtn.disabled = true;
 
-  // Prepare payload for backend
   const payload = {
     message: text,
     persona: AppState.activePersona,
@@ -820,26 +861,32 @@ async function handleSendMessage() {
   };
 
   const headers = { "Content-Type": "application/json" };
-  if (AppState.apiKey) {
-    headers["x-gemini-api-key"] = AppState.apiKey;
-  }
+  if (AppState.apiKey) headers["x-gemini-api-key"] = AppState.apiKey;
 
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
-      headers: headers,
+      headers,
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
+    // ── Rate limited ────────────────────────────────────────────────────────
+    if (response.status === 429) {
+      let msg = "Too many requests — please wait a moment before sending another message.";
+      try { const d = await response.json(); if (d.message) msg = d.message; } catch (_) {}
+      hideThinkingState();
+      appendErrorCard(text, msg, "rate_limited");
+      return;
     }
 
-    // Hide indicator and prepare streaming row
-    elements.typingIndicator.classList.add("hidden");
-    
-    // Create an empty bot message row for streaming
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+    // ── Stream response ─────────────────────────────────────────────────────
+    hideThinkingState();
+
     let botFullText = "";
+    let responseReason = "ok";
+    let responseErrorMsg = null;
     const botRow = appendMessageElement("model", "");
     const bubble = botRow.querySelector(".msg-bubble");
     const actionsRow = botRow.querySelector(".msg-meta-row");
@@ -851,11 +898,9 @@ async function handleSendMessage() {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n\n");
-      buffer = lines.pop(); // keep remainder
-
+      buffer = lines.pop();
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
@@ -865,26 +910,55 @@ async function handleSendMessage() {
               bubble.innerHTML = renderMarkdown(botFullText);
               scrollToBottom();
             }
-          } catch(e){}
+            if (data.done) {
+              responseReason = data.reason || "ok";
+              responseErrorMsg = data.message || null;
+            }
+          } catch (_) {}
         }
       }
     }
 
-    // Final render math & code highlight
-    renderMathInElement(bubble);
-    bubble.querySelectorAll('pre code').forEach((block) => {
-      hljs.highlightElement(block);
-    });
+    // ── Handle response reason ───────────────────────────────────────────────
+    if (responseReason === "api_error") {
+      botRow.remove();
+      const errMsg = responseErrorMsg || "Gemini API returned an error. Your key may be invalid or your quota may be exceeded.";
+      appendErrorCard(text, errMsg, "api_error");
+      return;
+    }
 
-    // Update action buttons on message
+    if (responseReason === "no_key") {
+      // Honest demo-mode banner at top of response bubble
+      bubble.insertAdjacentHTML("afterbegin", `
+        <div class="demo-mode-banner" role="status">
+          <i class="fa-solid fa-key" aria-hidden="true"></i>
+          <span>Demo Mode &mdash; <a href="#" onclick="openSettingsModal(); return false;">Add your Gemini API key</a> for real AI responses.</span>
+          <button class="demo-banner-dismiss" aria-label="Dismiss demo notice" onclick="this.parentElement.remove()">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+      `);
+    }
+
+    // Final render — math + syntax highlight
+    renderMathInElement(bubble);
+    bubble.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+
+    // Action buttons + Regenerate
     actionsRow.innerHTML = `
       <span class="msg-time">${now}</span>
       <div class="msg-actions" style="opacity:1">
-        <button class="msg-action-btn" title="Speak message aloud" onclick="speakMessageText(${JSON.stringify(botFullText).replace(/"/g, '&quot;')}, this)">
+        <button class="msg-action-btn" aria-label="Speak message aloud" title="Speak aloud"
+          onclick="speakMessageText(${JSON.stringify(botFullText).replace(/"/g, '&quot;')}, this)">
           <i class="fa-solid fa-volume-high"></i>
         </button>
-        <button class="msg-action-btn" title="Copy text" onclick="copyMessageText(${JSON.stringify(botFullText).replace(/"/g, '&quot;')}, this)">
+        <button class="msg-action-btn" aria-label="Copy text" title="Copy text"
+          onclick="copyMessageText(${JSON.stringify(botFullText).replace(/"/g, '&quot;')}, this)">
           <i class="fa-regular fa-copy"></i>
+        </button>
+        <button class="msg-action-btn regenerate-btn" aria-label="Regenerate response" title="Regenerate response"
+          onclick="regenerateLastResponse()">
+          <i class="fa-solid fa-rotate-right"></i>
         </button>
       </div>
     `;
@@ -893,22 +967,133 @@ async function handleSendMessage() {
     currentChat.messages.push({ role: "model", content: botFullText, time: now });
     saveChatsToStorage();
 
-    // Auto-Speak if enabled
-    if (AppState.autoVoice && botFullText) {
-      speakText(botFullText);
-    }
+    // Auto-speak if enabled
+    if (AppState.autoVoice && botFullText) speakText(botFullText);
 
   } catch (err) {
     console.error("Chat error:", err);
-    elements.typingIndicator.classList.add("hidden");
-    const errorText = `⚠️ **Failed to connect with Gemini AI:**\n${err.message}\n\nPlease check your internet connection or configure your API Key in Settings.`;
-    appendMessageElement("model", errorText, now);
-    currentChat.messages.push({ role: "model", content: errorText, time: now });
-    saveChatsToStorage();
+    hideThinkingState();
+    appendErrorCard(text, err.message || "Failed to connect to Gemini AI. Check your internet connection.", "api_error");
   } finally {
     AppState.isStreaming = false;
     elements.sendBtn.disabled = false;
     scrollToBottom();
+  }
+}
+
+// ================= Error Cards =================
+function appendErrorCard(userText, errorMessage, errorType = "api_error") {
+  const isRateLimit = errorType === "rate_limited";
+  const icon = isRateLimit ? "fa-clock" : "fa-triangle-exclamation";
+  const title = isRateLimit ? "Rate limit reached" : "Request failed";
+
+  const row = document.createElement("div");
+  row.className = "error-message-row";
+  row.dataset.userPrompt = userText;
+
+  row.innerHTML = `
+    <div class="error-card">
+      <div class="error-card-header">
+        <i class="fa-solid ${icon}" aria-hidden="true"></i>
+        <span>${title}</span>
+        <button class="error-dismiss-btn" aria-label="Dismiss error"
+          onclick="this.closest('.error-message-row').remove()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <p class="error-card-msg">${escapeHtml(errorMessage)}</p>
+      <button class="error-retry-btn" onclick="retryFromErrorCard(this)">
+        <i class="fa-solid fa-rotate-right"></i> Retry
+      </button>
+    </div>
+  `;
+
+  elements.messagesList.appendChild(row);
+  scrollToBottom();
+  return row;
+}
+
+window.retryFromErrorCard = function(btn) {
+  const row = btn.closest(".error-message-row");
+  const userText = row?.dataset.userPrompt || AppState.lastUserPrompt;
+  if (!userText) return;
+  row?.remove();
+  elements.messageInput.value = userText;
+  handleSendMessage();
+};
+
+// ================= Regenerate Last Response =================
+function regenerateLastResponse() {
+  if (AppState.isStreaming) return;
+  const chat = AppState.chats[AppState.activeChatId];
+  if (!chat || chat.messages.length < 2) return;
+
+  // Find the last user message
+  let lastUserMsg = null;
+  for (let i = chat.messages.length - 1; i >= 0; i--) {
+    if (chat.messages[i].role === "user") { lastUserMsg = chat.messages[i]; break; }
+  }
+  if (!lastUserMsg) return;
+
+  // Drop last bot reply from history
+  if (chat.messages[chat.messages.length - 1].role === "model") chat.messages.pop();
+  saveChatsToStorage();
+  renderActiveChat();
+
+  elements.messageInput.value = lastUserMsg.content;
+  handleSendMessage();
+}
+
+// ================= Test API Key Connection =================
+async function testApiKeyConnection() {
+  const testBtn = document.getElementById("testConnectionBtn");
+  const resultEl = document.getElementById("apiTestResult");
+  const keyToTest = elements.apiKeyInput.value.trim();
+
+  if (!keyToTest) {
+    resultEl.className = "api-test-result error";
+    resultEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Enter an API key first`;
+    return;
+  }
+
+  testBtn.disabled = true;
+  testBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing…`;
+  resultEl.className = "api-test-result";
+  resultEl.textContent = "";
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-gemini-api-key": keyToTest },
+      body: JSON.stringify({
+        message: "Hi",
+        persona: "general",
+        model: AppState.model || "gemini-1.5-flash",
+        temperature: 0.1,
+        history: [],
+        stream: false
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.reason === "ok" && !data.demo_mode) {
+      resultEl.className = "api-test-result success";
+      resultEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Key valid — Gemini responded`;
+    } else if (data.demo_mode || data.reason === "no_key") {
+      resultEl.className = "api-test-result error";
+      resultEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Key not recognised by server`;
+    } else {
+      const msg = data.error || data.message || "Connection failed";
+      resultEl.className = "api-test-result error";
+      resultEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(msg)}`;
+    }
+  } catch (err) {
+    resultEl.className = "api-test-result error";
+    resultEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Network error: ${escapeHtml(err.message)}`;
+  } finally {
+    testBtn.disabled = false;
+    testBtn.innerHTML = `<i class="fa-solid fa-plug-circle-check"></i> Test Connection`;
   }
 }
 
@@ -1088,6 +1273,14 @@ function setupEventListeners() {
   elements.newChatBtn.onclick = () => createNewChat();
   elements.clearHistoryBtn.onclick = clearAllHistory;
 
+  // History search
+  const historySearchInput = document.getElementById("historySearchInput");
+  if (historySearchInput) {
+    historySearchInput.addEventListener("input", (e) => {
+      renderSidebarHistory(e.target.value.trim());
+    });
+  }
+
   // Textarea input
   elements.messageInput.addEventListener("input", () => {
     autoResizeTextarea();
@@ -1104,24 +1297,31 @@ function setupEventListeners() {
   // Send button
   elements.sendBtn.onclick = handleSendMessage;
 
-  // Mic recording button
+  // Mic recording button — update aria-pressed on state change
   elements.micBtn.onclick = () => {
     if (AppState.isRecording) {
       stopRecording();
+      elements.micBtn.setAttribute("aria-pressed", "false");
     } else {
       startRecording();
+      elements.micBtn.setAttribute("aria-pressed", "true");
     }
   };
-  elements.cancelVoiceBtn.onclick = stopRecording;
+  elements.cancelVoiceBtn.onclick = () => {
+    stopRecording();
+    elements.micBtn.setAttribute("aria-pressed", "false");
+  };
 
   // Auto Voice Output Toggle
   elements.ttsToggleBtn.onclick = () => {
     AppState.autoVoice = !AppState.autoVoice;
     localStorage.setItem("aether_auto_voice", AppState.autoVoice);
     elements.ttsToggleBtn.classList.toggle("active", AppState.autoVoice);
+    elements.ttsToggleBtn.setAttribute("aria-pressed", String(AppState.autoVoice));
     elements.ttsToggleIcon.className = AppState.autoVoice ? "fa-solid fa-volume-high" : "fa-solid fa-volume-xmark";
     elements.ttsToggleLabel.textContent = AppState.autoVoice ? "Voice ON" : "Voice OFF";
-    showToast(AppState.autoVoice ? "Auto voice playback enabled" : "Auto voice playback muted", AppState.autoVoice ? "fa-volume-high" : "fa-volume-xmark");
+    showToast(AppState.autoVoice ? "Auto voice playback enabled" : "Auto voice playback muted",
+      AppState.autoVoice ? "fa-volume-high" : "fa-volume-xmark");
   };
 
   // Floating Audio Player Controls
@@ -1158,6 +1358,10 @@ function setupEventListeners() {
   elements.closeSettingsModalBtn.onclick = closeSettingsModal;
   elements.cancelSettingsBtn.onclick = closeSettingsModal;
   elements.saveSettingsBtn.onclick = saveSettings;
+
+  // Test Connection button
+  const testBtn = document.getElementById("testConnectionBtn");
+  if (testBtn) testBtn.addEventListener("click", testApiKeyConnection);
 
   // Password visibility
   elements.toggleApiKeyVis.onclick = () => {

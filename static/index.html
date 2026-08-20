@@ -83,7 +83,13 @@
             <i class="fa-solid fa-clock-rotate-left"></i>
             <span>Recent Chats</span>
           </div>
-          <button class="text-btn text-xs" id="clearHistoryBtn" title="Clear all history">Clear All</button>
+          <button class="text-btn text-xs" id="clearHistoryBtn" title="Clear all history" aria-label="Clear all chat history">Clear All</button>
+        </div>
+        <!-- History search -->
+        <div class="history-search-wrap">
+          <i class="fa-solid fa-magnifying-glass history-search-icon" aria-hidden="true"></i>
+          <input type="search" id="historySearchInput" class="history-search-input"
+            placeholder="Search conversations…" aria-label="Search chat history">
         </div>
         <div class="chat-history-list" id="chatHistoryList">
           <!-- Rendered via JS -->
@@ -109,7 +115,7 @@
             <span>Settings</span>
           </button>
           <div class="theme-dropdown-wrap">
-            <button class="footer-btn icon-only" id="themePickerBtn" title="Switch Theme">
+            <button class="footer-btn icon-only" id="themePickerBtn" title="Switch Theme" aria-label="Cycle to next colour theme">
               <i class="fa-solid fa-palette"></i>
             </button>
           </div>
@@ -150,23 +156,23 @@
 
         <div class="nav-right">
           <!-- Voice Output Toggle -->
-          <button class="nav-action-btn" id="ttsToggleBtn" title="Toggle Auto-Voice Playback">
+          <button class="nav-action-btn" id="ttsToggleBtn" title="Toggle Auto-Voice Playback" aria-label="Toggle auto voice playback" aria-pressed="true">
             <i class="fa-solid fa-volume-high" id="ttsToggleIcon"></i>
             <span class="btn-label" id="ttsToggleLabel">Voice ON</span>
           </button>
 
           <!-- Export Chat -->
-          <button class="nav-action-btn icon-only" id="exportChatBtn" title="Export Conversation">
+          <button class="nav-action-btn icon-only" id="exportChatBtn" title="Export Conversation" aria-label="Export conversation to Markdown">
             <i class="fa-solid fa-arrow-up-from-bracket"></i>
           </button>
 
           <!-- Clear Current Chat -->
-          <button class="nav-action-btn icon-only" id="clearCurrentChatBtn" title="Clear Chat Messages">
+          <button class="nav-action-btn icon-only" id="clearCurrentChatBtn" title="Clear Chat Messages" aria-label="Clear all messages in current chat">
             <i class="fa-solid fa-trash-can"></i>
           </button>
 
           <!-- Settings Button -->
-          <button class="nav-action-btn icon-only" id="headerSettingsBtn" title="Open Settings">
+          <button class="nav-action-btn icon-only" id="headerSettingsBtn" title="Open Settings" aria-label="Open settings">
             <i class="fa-solid fa-gear"></i>
           </button>
         </div>
@@ -205,10 +211,10 @@
         <div class="messages-list" id="messagesList"></div>
 
         <!-- Typing / Streaming Indicator -->
-        <div class="typing-indicator-row hidden" id="typingIndicator">
+        <div class="typing-indicator-row hidden" id="typingIndicator" role="status" aria-live="polite" aria-label="AI thinking indicator">
           <div class="bot-avatar-wrap">
             <div class="bot-avatar-inner">
-              <i class="fa-solid fa-brain"></i>
+              <i class="fa-solid fa-brain" id="typingAvatarIcon"></i>
             </div>
           </div>
           <div class="typing-bubble">
@@ -228,11 +234,11 @@
           </div>
           <span class="audio-status-label" id="audioStatusLabel">AI Voice Playing...</span>
         </div>
-        <div class="audio-bar-controls">
-          <button class="audio-ctrl-btn" id="pauseResumeAudioBtn" title="Pause/Resume">
+        <div class="audio-bar-controls" role="group" aria-label="Audio playback controls">
+          <button class="audio-ctrl-btn" id="pauseResumeAudioBtn" title="Pause or resume" aria-label="Pause or resume audio">
             <i class="fa-solid fa-pause" id="pauseResumeIcon"></i>
           </button>
-          <button class="audio-ctrl-btn" id="stopAudioBtn" title="Stop Audio">
+          <button class="audio-ctrl-btn" id="stopAudioBtn" title="Stop Audio" aria-label="Stop audio">
             <i class="fa-solid fa-stop"></i>
           </button>
         </div>
@@ -246,7 +252,7 @@
           <div class="voice-recording-banner hidden" id="voiceRecordingBanner">
             <div class="recording-pulse-dot"></div>
             <div class="recording-transcription" id="voiceTranscriptionText">Listening to your voice...</div>
-            <button class="stop-recording-btn" id="cancelVoiceBtn" title="Cancel voice input">
+            <button class="stop-recording-btn" id="cancelVoiceBtn" title="Cancel voice input" aria-label="Cancel voice input">
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
@@ -255,7 +261,7 @@
           <div class="input-inner">
             
             <!-- Voice Input Trigger Button -->
-            <button class="mic-action-btn" id="micBtn" title="Click or Hold to Speak">
+            <button class="mic-action-btn" id="micBtn" title="Click to start voice input" aria-label="Start voice input" aria-pressed="false">
               <i class="fa-solid fa-microphone" id="micBtnIcon"></i>
               <div class="mic-wave-glow" id="micGlow"></div>
             </button>
@@ -315,11 +321,18 @@
             </a>
           </label>
           <div class="input-with-icon">
-            <i class="fa-solid fa-key input-prefix-icon"></i>
-            <input type="password" id="apiKeyInput" placeholder="AIzaSy... (Leave empty to use server .env)">
-            <button class="toggle-password-btn" id="toggleApiKeyVis" title="Show/Hide Key">
+            <i class="fa-solid fa-key input-prefix-icon" aria-hidden="true"></i>
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy... (Leave empty to use server .env)" aria-label="Gemini API key">
+            <button class="toggle-password-btn" id="toggleApiKeyVis" title="Show or hide key" aria-label="Show or hide API key">
               <i class="fa-regular fa-eye" id="eyeIcon"></i>
             </button>
+          </div>
+          <div class="api-test-row">
+            <button class="test-connection-btn" id="testConnectionBtn" type="button">
+              <i class="fa-solid fa-plug-circle-check"></i>
+              Test Connection
+            </button>
+            <span class="api-test-result" id="apiTestResult" role="status" aria-live="polite"></span>
           </div>
           <p class="setting-helper">Keys stored safely in browser local storage for direct API streaming.</p>
         </div>
