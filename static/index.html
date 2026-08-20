@@ -13,7 +13,9 @@
   
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/static/img/mimi-logo.svg">
+
   <!-- Highlight.js for Code Highlighting -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -44,12 +46,14 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="logo-wrap">
-          <div class="logo-orb">
-            <i class="fa-solid fa-brain-circuit"></i>
-          </div>
-          <div class="logo-text">
-            <h2>MIMI <span class="logo-badge">VOICE</span></h2>
-            <p>Multimodal Intelligence</p>
+          <div class="logo-mimi-brand">
+            <svg class="mimi-brand-svg" viewBox="0 0 180 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="MIMI Logo">
+              <path d="M 16 62 C 18 48, 25 50, 29 50 C 33 50, 37 62, 42 62 C 47 62, 50 50, 55 50 C 60 50, 64 62, 69 62 C 72 62, 75 56, 75 52 L 75 62 C 81 62, 85 43, 96 43 C 106 43, 104 58, 112 58 C 120 58, 122 28, 134 28 C 145 28, 144 62, 156 62 C 160 62, 163 56, 163 52 L 163 62" 
+                    stroke="currentColor" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="72" y="41" width="6.5" height="6.5" rx="1.5" fill="currentColor" />
+              <rect x="160" y="41" width="6.5" height="6.5" rx="1.5" fill="currentColor" />
+            </svg>
+            <span class="logo-badge">VOICE</span>
           </div>
         </div>
         <button class="icon-btn sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar">
@@ -184,7 +188,12 @@
         <div class="welcome-screen" id="welcomeScreen">
           <div class="welcome-orb">
             <div class="orb-inner">
-              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <svg class="mimi-welcome-svg" viewBox="0 0 180 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M 16 62 C 18 48, 25 50, 29 50 C 33 50, 37 62, 42 62 C 47 62, 50 50, 55 50 C 60 50, 64 62, 69 62 C 72 62, 75 56, 75 52 L 75 62 C 81 62, 85 43, 96 43 C 106 43, 104 58, 112 58 C 120 58, 122 28, 134 28 C 145 28, 144 62, 156 62 C 160 62, 163 56, 163 52 L 163 62" 
+                      stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="72" y="41" width="7" height="7" rx="1.5" fill="currentColor" />
+                <rect x="160" y="41" width="7" height="7" rx="1.5" fill="currentColor" />
+              </svg>
             </div>
             <div class="orb-glow"></div>
           </div>

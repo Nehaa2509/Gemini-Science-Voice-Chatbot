@@ -429,15 +429,26 @@ body {
   100% { transform: scale(1.05); filter: brightness(1.2); }
 }
 
-.logo-text h2 {
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  line-height: 1.1;
+.logo-mimi-brand {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+
+.mimi-brand-svg {
+  height: 34px;
+  width: auto;
+  color: var(--text-primary);
+  display: block;
+  transition: color var(--transition-fast);
+}
+
+.mimi-welcome-svg {
+  width: 54px;
+  height: auto;
+  color: #ffffff;
+  display: block;
 }
 
 .logo-badge {
@@ -449,10 +460,6 @@ body {
   font-weight: 700;
 }
 
-.logo-text p {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
 
 .sidebar-close-btn {
   display: none;
