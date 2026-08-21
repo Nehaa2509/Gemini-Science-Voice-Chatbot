@@ -17,7 +17,7 @@ const AppState = {
   voiceRate: parseFloat(localStorage.getItem("aether_voice_rate") || "1.0"),
   voicePitch: parseFloat(localStorage.getItem("aether_voice_pitch") || "1.0"),
   autoVoice: localStorage.getItem("aether_auto_voice") !== "false", // default true
-  theme: localStorage.getItem("aether_theme") || "mimi",
+  theme: localStorage.getItem("aether_theme") || "claude-dark",
   customPrompt: localStorage.getItem("aether_custom_prompt") || "",
   isStreaming: false,
   isRecording: false,
@@ -778,7 +778,7 @@ function appendMessageElement(role, content, time = null, animate = true) {
 
   const avatarContent = isUser 
     ? `<i class="fa-solid fa-user"></i>` 
-    : `<i class="fa-solid ${p.icon}"></i>`;
+    : `<span class="claude-avatar-star">✦</span>`;
 
   const parsedHTML = isUser ? escapeHtml(content).replace(/\n/g, '<br>') : renderMarkdown(content);
 
@@ -1389,7 +1389,7 @@ function setupEventListeners() {
   });
 
   // Cycle theme button
-  const themes = ["neon", "cyberpunk", "aurora", "sunset", "mimi", "claude", "light"];
+  const themes = ["claude-dark", "claude", "mimi", "neon", "cyberpunk", "aurora"];
   elements.themePickerBtn.onclick = () => {
     const nextIdx = (themes.indexOf(AppState.theme) + 1) % themes.length;
     applyTheme(themes[nextIdx]);

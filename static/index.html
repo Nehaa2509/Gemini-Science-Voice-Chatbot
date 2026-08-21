@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="mimi">
+<html lang="en" data-theme="claude-dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +9,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -47,12 +47,8 @@
       <div class="sidebar-header">
         <div class="logo-wrap">
           <div class="logo-mimi-brand">
-            <svg class="mimi-brand-svg" viewBox="0 0 180 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="MIMI Logo">
-              <path d="M 16 62 C 18 48, 25 50, 29 50 C 33 50, 37 62, 42 62 C 47 62, 50 50, 55 50 C 60 50, 64 62, 69 62 C 72 62, 75 56, 75 52 L 75 62 C 81 62, 85 43, 96 43 C 106 43, 104 58, 112 58 C 120 58, 122 28, 134 28 C 145 28, 144 62, 156 62 C 160 62, 163 56, 163 52 L 163 62" 
-                    stroke="currentColor" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="72" y="41" width="6.5" height="6.5" rx="1.5" fill="currentColor" />
-              <rect x="160" y="41" width="6.5" height="6.5" rx="1.5" fill="currentColor" />
-            </svg>
+            <span class="claude-star-icon">✦</span>
+            <span class="logo-brand-title">MIMI</span>
             <span class="logo-badge">VOICE</span>
           </div>
         </div>
@@ -186,20 +182,12 @@
       <section class="messages-container" id="messagesContainer">
         <!-- Welcome Screen (Visible when chat is empty) -->
         <div class="welcome-screen" id="welcomeScreen">
-          <div class="welcome-orb">
-            <div class="orb-inner">
-              <svg class="mimi-welcome-svg" viewBox="0 0 180 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M 16 62 C 18 48, 25 50, 29 50 C 33 50, 37 62, 42 62 C 47 62, 50 50, 55 50 C 60 50, 64 62, 69 62 C 72 62, 75 56, 75 52 L 75 62 C 81 62, 85 43, 96 43 C 106 43, 104 58, 112 58 C 120 58, 122 28, 134 28 C 145 28, 144 62, 156 62 C 160 62, 163 56, 163 52 L 163 62" 
-                      stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-                <rect x="72" y="41" width="7" height="7" rx="1.5" fill="currentColor" />
-                <rect x="160" y="41" width="7" height="7" rx="1.5" fill="currentColor" />
-              </svg>
-            </div>
-            <div class="orb-glow"></div>
+          <div class="welcome-claude-mark">
+            <span>✦</span>
           </div>
-          <h1 class="welcome-heading">How can I assist your curiosity today?</h1>
+          <h1 class="welcome-heading">What would you like to explore or build?</h1>
           <p class="welcome-desc">
-            Speak naturally with speech recognition, explore scientific phenomena, architect code, or dive into creative writing with real-time Gemini AI.
+            Explore scientific concepts, architect software, analyze documents, or speak naturally with real-time multimodal AI.
           </p>
 
           <!-- Prompt Starter Cards -->
@@ -400,33 +388,29 @@
         <div class="setting-group">
           <label class="setting-label">Color Theme</label>
           <div class="theme-options-grid">
-            <button class="theme-chip active" data-theme-val="neon">
+            <button class="theme-chip active" data-theme-val="claude-dark" title="Claude Code Dark">
+              <span class="theme-dot claude-dark-dot"></span>
+              <span>Claude Code</span>
+            </button>
+            <button class="theme-chip" data-theme-val="claude" title="Claude Warm Ivory">
+              <span class="theme-dot claude-dot"></span>
+              <span>Claude Warm</span>
+            </button>
+            <button class="theme-chip" data-theme-val="mimi" title="Mimi Velvet">
+              <span class="theme-dot mimi-dot"></span>
+              <span>Mimi Plum</span>
+            </button>
+            <button class="theme-chip" data-theme-val="neon" title="Dark Neon">
               <span class="theme-dot neon-dot"></span>
               <span>Dark Neon</span>
             </button>
-            <button class="theme-chip" data-theme-val="cyberpunk">
+            <button class="theme-chip" data-theme-val="cyberpunk" title="Cyberpunk">
               <span class="theme-dot cyberpunk-dot"></span>
               <span>Cyberpunk</span>
             </button>
-            <button class="theme-chip" data-theme-val="aurora">
+            <button class="theme-chip" data-theme-val="aurora" title="Aurora Emerald">
               <span class="theme-dot aurora-dot"></span>
-              <span>Aurora Emerald</span>
-            </button>
-            <button class="theme-chip" data-theme-val="sunset">
-              <span class="theme-dot sunset-dot"></span>
-              <span>Amber Sunset</span>
-            </button>
-            <button class="theme-chip" data-theme-val="mimi" title="Mimi">
-              <span class="theme-dot mimi-dot"></span>
-              <span>Mimi</span>
-            </button>
-            <button class="theme-chip" data-theme-val="claude" title="Minimal Warm">
-              <span class="theme-dot claude-dot"></span>
-              <span>Minimal Warm</span>
-            </button>
-            <button class="theme-chip" data-theme-val="light">
-              <span class="theme-dot light-dot"></span>
-              <span>Clean Light</span>
+              <span>Aurora</span>
             </button>
           </div>
         </div>
