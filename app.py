@@ -348,65 +348,66 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
 
         gen_config = create_gen_config()
 
+        # Candidate models to try in order (requested model first, then alternates)
+        candidate_models = [active_model_name]
+        for alt in ["gemini-3.6-flash", "gemini-3.7-flash"]:
+            if alt not in candidate_models:
+                candidate_models.append(alt)
+
         if body.stream:
             async def sse_generator():
-                nonlocal active_model_name, gen_config
-                try:
+                last_stream_err = None
+                successful_model = active_model_name
+
+                for model_candidate in candidate_models:
                     try:
-                        response_stream = await call_gemini_with_retry(
-                            lambda: client.models.generate_content_stream(
-                                model=active_model_name,
-                                contents=contents,
-                                config=gen_config,
-                            )
-                        )
-                    except Exception as model_err:
-                        if "404" in str(model_err) or "not found" in str(model_err).lower():
-                            logger.warning(f"Model {active_model_name} failed with 404. Falling back to gemini-3.7-flash.")
-                            active_model_name = "gemini-3.7-flash"
-                            response_stream = await call_gemini_with_retry(
-                                lambda: client.models.generate_content_stream(
-                                    model=active_model_name,
-                                    contents=contents,
-                                    config=gen_config,
-                                )
-                            )
-                        else:
-                            raise
-
-                    for chunk in response_stream:
-                        if chunk.text:
-                            payload = json.dumps({"text": chunk.text, "done": False})
-                            yield f"data: {payload}\n\n"
-                    yield f"data: {json.dumps({'text': '', 'done': True, 'reason': 'ok'})}\n\n"
-                except Exception as e:
-                    logger.error(f"Streaming error: {e}")
-                    yield f"data: {json.dumps({'text': '', 'done': True, 'error': True, 'reason': 'api_error', 'message': str(e)})}\n\n"
-
-            return StreamingResponse(sse_generator(), media_type="text/event-stream")
-        else:
-            try:
-                response = await call_gemini_with_retry(
-                    lambda: client.models.generate_content(
-                        model=active_model_name,
-                        contents=contents,
-                        config=gen_config,
-                    )
-                )
-            except Exception as model_err:
-                if "404" in str(model_err) or "not found" in str(model_err).lower():
-                    logger.warning(f"Model {active_model_name} failed with 404. Falling back to gemini-3.7-flash.")
-                    active_model_name = "gemini-3.7-flash"
-                    response = await call_gemini_with_retry(
-                        lambda: client.models.generate_content(
-                            model=active_model_name,
+                        # Attempt to stream with candidate model
+                        logger.info(f"Attempting stream with model: {model_candidate}")
+                        stream = client.models.generate_content_stream(
+                            model=model_candidate,
                             contents=contents,
                             config=gen_config,
                         )
+                        chunk_count = 0
+                        for chunk in stream:
+                            if chunk.text:
+                                chunk_count += 1
+                                payload = json.dumps({"text": chunk.text, "done": False, "model": model_candidate})
+                                yield f"data: {payload}\n\n"
+
+                        # If stream completed successfully
+                        yield f"data: {json.dumps({'text': '', 'done': True, 'reason': 'ok', 'model': model_candidate})}\n\n"
+                        return
+
+                    except Exception as model_err:
+                        last_stream_err = model_err
+                        logger.warning(f"Model {model_candidate} stream error: {model_err}. Trying fallback model...")
+                        await asyncio.sleep(0.5)
+                        continue
+
+                # If all candidate models failed
+                logger.error(f"All candidate models failed. Last error: {last_stream_err}")
+                yield f"data: {json.dumps({'text': '', 'done': True, 'error': True, 'reason': 'api_error', 'message': str(last_stream_err)})}\n\n"
+
+            return StreamingResponse(sse_generator(), media_type="text/event-stream")
+        else:
+            last_err = None
+            for model_candidate in candidate_models:
+                try:
+                    logger.info(f"Attempting generate_content with model: {model_candidate}")
+                    response = client.models.generate_content(
+                        model=model_candidate,
+                        contents=contents,
+                        config=gen_config,
                     )
-                else:
-                    raise
-            return {"response": response.text, "model": active_model_name, "demo_mode": False, "reason": "ok"}
+                    return {"response": response.text, "model": model_candidate, "demo_mode": False, "reason": "ok"}
+                except Exception as model_err:
+                    last_err = model_err
+                    logger.warning(f"Model {model_candidate} error: {model_err}. Trying fallback model...")
+                    await asyncio.sleep(0.5)
+                    continue
+
+            raise last_err or RuntimeError("All candidate models failed to generate response.")
 
     except Exception as e:
         logger.error(f"Chat generation error: {e}")
