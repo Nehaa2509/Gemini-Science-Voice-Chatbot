@@ -922,6 +922,16 @@ async function handleSendMessage() {
     }
 
     // ── Handle response reason ───────────────────────────────────────────────
+    if (responseReason === "stream_interrupted") {
+      // Mid-stream failure: partial content was already displayed in the bubble.
+      // Remove the incomplete bot row and show a retry card so the user can
+      // resend cleanly rather than seeing a truncated/garbled reply.
+      botRow.remove();
+      const errMsg = responseErrorMsg || "Response was interrupted — please try again.";
+      appendErrorCard(text, errMsg, "stream_interrupted");
+      return;
+    }
+
     if (responseReason === "api_error") {
       botRow.remove();
       const errMsg = responseErrorMsg || "Gemini API returned an error. Your key may be invalid or your quota may be exceeded.";
@@ -986,8 +996,13 @@ async function handleSendMessage() {
 // ================= Error Cards =================
 function appendErrorCard(userText, errorMessage, errorType = "api_error") {
   const isRateLimit = errorType === "rate_limited";
-  const icon = isRateLimit ? "fa-clock" : "fa-triangle-exclamation";
-  const title = isRateLimit ? "Rate limit reached" : "Request failed";
+  const isInterrupted = errorType === "stream_interrupted";
+  const icon  = isRateLimit   ? "fa-clock"
+              : isInterrupted ? "fa-circle-pause"
+              :                 "fa-triangle-exclamation";
+  const title = isRateLimit   ? "Rate limit reached"
+              : isInterrupted ? "Response interrupted"
+              :                 "Request failed";
 
   const row = document.createElement("div");
   row.className = "error-message-row";

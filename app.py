@@ -357,40 +357,78 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
         if body.stream:
             async def sse_generator():
                 last_stream_err = None
-                successful_model = active_model_name
+                # chunk_count tracks how many content chunks have been sent to
+                # the client across ALL model candidates in this request.
+                # Once the first chunk is sent, the user sees partial output —
+                # falling back to another model and restarting would cause
+                # duplicate / garbled output.  We guard against that below.
+                total_chunks_yielded = 0
 
                 for model_candidate in candidate_models:
+                    chunk_count = 0
                     try:
-                        # Attempt to stream with candidate model
                         logger.info(f"Attempting stream with model: {model_candidate}")
                         stream = client.models.generate_content_stream(
                             model=model_candidate,
                             contents=contents,
                             config=gen_config,
                         )
-                        chunk_count = 0
                         for chunk in stream:
                             if chunk.text:
                                 chunk_count += 1
+                                total_chunks_yielded += 1
                                 payload = json.dumps({"text": chunk.text, "done": False, "model": model_candidate})
                                 yield f"data: {payload}\n\n"
 
-                        # If stream completed successfully
+                        # Stream completed successfully
                         yield f"data: {json.dumps({'text': '', 'done': True, 'reason': 'ok', 'model': model_candidate})}\n\n"
                         return
 
                     except Exception as model_err:
                         last_stream_err = model_err
-                        logger.warning(f"Model {model_candidate} stream error: {model_err}. Trying fallback model...")
+                        if chunk_count > 0:
+                            # Partial content already shown to the client.
+                            # Restarting from another model would produce
+                            # duplicate / concatenated output — send a graceful
+                            # interruption signal instead.
+                            logger.error(
+                                f"Model {model_candidate} failed mid-stream after "
+                                f"{chunk_count} chunks: {model_err}"
+                            )
+                            interrupted_payload = json.dumps({
+                                "text": "",
+                                "done": True,
+                                "error": True,
+                                "reason": "stream_interrupted",
+                                "message": "Response was interrupted — please try again.",
+                            })
+                            yield f"data: {interrupted_payload}\n\n"
+                            return
+                        # No content sent yet — safe to try the next candidate.
+                        logger.warning(
+                            f"Model {model_candidate} failed before any output "
+                            f"({model_err}). Trying fallback model..."
+                        )
                         await asyncio.sleep(0.5)
                         continue
 
-                # If all candidate models failed
+                # All candidate models failed before sending any content
                 logger.error(f"All candidate models failed. Last error: {last_stream_err}")
-                yield f"data: {json.dumps({'text': '', 'done': True, 'error': True, 'reason': 'api_error', 'message': str(last_stream_err)})}\n\n"
+                all_failed_payload = json.dumps({
+                    "text": "",
+                    "done": True,
+                    "error": True,
+                    "reason": "api_error",
+                    "message": str(last_stream_err),
+                })
+                yield f"data: {all_failed_payload}\n\n"
 
             return StreamingResponse(sse_generator(), media_type="text/event-stream")
         else:
+            # Non-streaming: generate_content() is atomic — either the full
+            # response is returned or an exception is raised.  No partial output
+            # is ever sent to the client, so falling back to the next candidate
+            # model on failure is always safe here.
             last_err = None
             for model_candidate in candidate_models:
                 try:
@@ -403,7 +441,10 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
                     return {"response": response.text, "model": model_candidate, "demo_mode": False, "reason": "ok"}
                 except Exception as model_err:
                     last_err = model_err
-                    logger.warning(f"Model {model_candidate} error: {model_err}. Trying fallback model...")
+                    logger.warning(
+                        f"Model {model_candidate} non-stream error: {model_err}. "
+                        f"Trying fallback model..."
+                    )
                     await asyncio.sleep(0.5)
                     continue
 
