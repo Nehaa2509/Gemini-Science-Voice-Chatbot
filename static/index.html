@@ -334,12 +334,11 @@
           <p class="setting-helper">Keys stored safely in browser local storage for direct API streaming.</p>
         </div>
 
-        <!-- AI Model Selection -->
+        <!-- AI Model Selection — options populated dynamically from /api/models on page load -->
         <div class="setting-group">
           <label for="modelSelect" class="setting-label">Gemini AI Model</label>
           <select id="modelSelect" class="custom-select">
-            <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash (Fast, Multimodal & Reasoning)</option>
-            <option value="gemini-3.6-flash">Gemini 3.6 Flash (Ultra Fast & Efficient)</option>
+            <!-- populated by fetchAndPopulateModels() in app.js -->
           </select>
         </div>
 

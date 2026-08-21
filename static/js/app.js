@@ -1423,6 +1423,55 @@ function setupEventListeners() {
   });
 }
 
+// ================= Model List (fetched from /api/models) =================
+/**
+ * Fetches the model list from /api/models and builds <option> elements for
+ * #modelSelect.  Falls back to a built-in default if the fetch fails so the
+ * settings modal is never left with an empty dropdown.
+ * Also restores the previously saved model selection and updates the header pill.
+ */
+async function fetchAndPopulateModels() {
+  const FALLBACK_MODELS = [
+    { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash (Fast, Multimodal & Reasoning)", recommended: true },
+    { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash (Ultra Fast & Efficient)",      recommended: false },
+  ];
+
+  let models = FALLBACK_MODELS;
+  try {
+    const res = await fetch("/api/models");
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.models) && data.models.length > 0) {
+        models = data.models;
+      }
+    }
+  } catch (err) {
+    console.warn("fetchAndPopulateModels: /api/models unreachable, using fallback list.", err);
+  }
+
+  const sel = elements.modelSelect;
+  sel.innerHTML = ""; // clear any stale options
+  models.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = m.name + (m.recommended ? " ★" : "");
+    sel.appendChild(opt);
+  });
+
+  // Restore the user's persisted model choice (validate it exists in the new list)
+  const savedModel = AppState.model;
+  const ids = models.map(m => m.id);
+  const resolved = ids.includes(savedModel) ? savedModel : (models.find(m => m.recommended) || models[0]).id;
+  AppState.model = resolved;
+  sel.value = resolved;
+  localStorage.setItem("aether_gemini_model", resolved);
+
+  // Update the header model pill to match the selected option label
+  if (elements.headerModelPill && sel.selectedIndex >= 0) {
+    elements.headerModelPill.textContent = sel.options[sel.selectedIndex].text.split("(")[0].replace("★", "").trim();
+  }
+}
+
 // ================= App Initialization =================
 document.addEventListener("DOMContentLoaded", () => {
   applyTheme(AppState.theme);
@@ -1446,11 +1495,7 @@ document.addEventListener("DOMContentLoaded", () => {
     createNewChat();
   }
 
-  localStorage.setItem("aether_gemini_model", AppState.model);
-  if (elements.modelSelect) elements.modelSelect.value = AppState.model;
-  if (elements.headerModelPill && elements.modelSelect && elements.modelSelect.selectedIndex >= 0) {
-    elements.headerModelPill.textContent = elements.modelSelect.options[elements.modelSelect.selectedIndex].text.split("(")[0].trim();
-  }
-
-  updateApiStatusUI();
+  // Populate model dropdown from /api/models (single source of truth in app.py).
+  // updateApiStatusUI() is called inside after the model is resolved.
+  fetchAndPopulateModels().then(() => updateApiStatusUI());
 });
