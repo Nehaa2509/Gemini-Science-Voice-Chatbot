@@ -117,7 +117,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     persona: str = "science"
-    model: str = "gemini-1.5-flash"
+    model: str = "gemini-3.7-flash"
     temperature: float = 0.7
     history: List[ChatMessage] = []
     custom_system_instruction: Optional[str] = None
@@ -219,7 +219,7 @@ Here is a sample answer to showcase formatting and voice playback:
 # Real-time Voice AI Engine
 def explore_future():
     print("Welcome to MIMI — next-gen conversational AI!")
-    return {{"status": "ready", "powered_by": "Gemini 1.5 Flash"}}
+    return {{"status": "ready", "powered_by": "Gemini 3.7 Flash"}}
 
 explore_future()
 ```
@@ -236,7 +236,7 @@ async def health_check():
     return {
         "status": "online",
         "has_server_api_key": has_env_key,
-        "default_model": "gemini-1.5-flash",
+        "default_model": "gemini-3.7-flash",
         "available_personas": list(PERSONA_PROMPTS.keys()),
     }
 
@@ -245,9 +245,8 @@ async def health_check():
 async def list_models():
     return {
         "models": [
-            {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash (Fast & Responsive)", "speed": "Ultra Fast", "recommended": True},
-            {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro (Deep Reasoning)", "speed": "Balanced", "recommended": False},
-            {"id": "gemini-2.0-flash-exp", "name": "Gemini 2.0 Flash (Next-Gen Preview)", "speed": "Blazing", "recommended": False}
+            {"id": "gemini-3.7-flash", "name": "Gemini 3.7 Flash (Reasoning & Speed)", "speed": "Ultra Fast", "recommended": True},
+            {"id": "gemini-3.6-flash", "name": "Gemini 3.6 Flash (Fast & Efficient)", "speed": "Blazing", "recommended": False}
         ],
         "personas": [
             {
@@ -286,11 +285,26 @@ async def list_models():
     }
 
 
+MODEL_ALIASES = {
+    "gemini-1.5-flash": "gemini-3.7-flash",
+    "gemini-1.5-pro": "gemini-3.7-flash",
+    "gemini-2.0-flash": "gemini-3.7-flash",
+    "gemini-2.0-flash-exp": "gemini-3.7-flash",
+    "gemini-2.5-flash": "gemini-3.7-flash",
+    "gemini-2.5-pro": "gemini-3.7-flash",
+}
+
+def resolve_model_name(requested_model: str) -> str:
+    cleaned = (requested_model or "").strip()
+    return MODEL_ALIASES.get(cleaned, cleaned or "gemini-3.7-flash")
+
+
 @app.post("/api/chat")
 @limiter.limit("20/minute")
 async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: Optional[str] = Header(None)):
     api_key = get_effective_api_key(x_gemini_api_key)
     system_instruction = body.custom_system_instruction or PERSONA_PROMPTS.get(body.persona, PERSONA_PROMPTS["general"])
+    active_model_name = resolve_model_name(body.model)
 
     # ── No API key: return friendly demo content with reason tag ─────────────
     if not api_key:
@@ -305,7 +319,7 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
                 # Signal demo mode so the frontend shows the "no key" banner
                 yield f"data: {json.dumps({'text': '', 'done': True, 'reason': 'no_key', 'demo_mode': True})}\n\n"
             return StreamingResponse(demo_streamer(), media_type="text/event-stream")
-        return {"response": demo_text, "model": body.model, "demo_mode": True, "reason": "no_key"}
+        return {"response": demo_text, "model": active_model_name, "demo_mode": True, "reason": "no_key"}
 
     # ── Real Gemini call with retry/backoff ───────────────────────────────────
     try:
@@ -316,20 +330,34 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
             role = "user" if item.role == "user" else "model"
             history_contents.append({"role": role, "parts": [item.content]})
 
-        gemini_model = genai.GenerativeModel(
-            model_name=body.model,
-            system_instruction=system_instruction,
-            generation_config=genai.types.GenerationConfig(
-                temperature=body.temperature,
-                max_output_tokens=3000,
+        def get_chat_session(model_to_use: str):
+            g_model = genai.GenerativeModel(
+                model_name=model_to_use,
+                system_instruction=system_instruction,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=body.temperature,
+                    max_output_tokens=3000,
+                )
             )
-        )
-        chat_session = gemini_model.start_chat(history=history_contents)
+            return g_model.start_chat(history=history_contents)
+
+        chat_session = get_chat_session(active_model_name)
 
         if body.stream:
             async def sse_generator():
+                nonlocal chat_session, active_model_name
                 try:
-                    response = await call_gemini_with_retry(chat_session, body.message, stream=True)
+                    try:
+                        response = await call_gemini_with_retry(chat_session, body.message, stream=True)
+                    except Exception as model_err:
+                        if "404" in str(model_err) or "not found" in str(model_err).lower():
+                            logger.warning(f"Model {active_model_name} failed with 404. Falling back to gemini-3.7-flash.")
+                            active_model_name = "gemini-3.7-flash"
+                            chat_session = get_chat_session(active_model_name)
+                            response = await call_gemini_with_retry(chat_session, body.message, stream=True)
+                        else:
+                            raise
+
                     for chunk in response:
                         if chunk.text:
                             payload = json.dumps({"text": chunk.text, "done": False})
@@ -341,8 +369,17 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
 
             return StreamingResponse(sse_generator(), media_type="text/event-stream")
         else:
-            response = await call_gemini_with_retry(chat_session, body.message, stream=False)
-            return {"response": response.text, "model": body.model, "demo_mode": False, "reason": "ok"}
+            try:
+                response = await call_gemini_with_retry(chat_session, body.message, stream=False)
+            except Exception as model_err:
+                if "404" in str(model_err) or "not found" in str(model_err).lower():
+                    logger.warning(f"Model {active_model_name} failed with 404. Falling back to gemini-3.7-flash.")
+                    active_model_name = "gemini-3.7-flash"
+                    chat_session = get_chat_session(active_model_name)
+                    response = await call_gemini_with_retry(chat_session, body.message, stream=False)
+                else:
+                    raise
+            return {"response": response.text, "model": active_model_name, "demo_mode": False, "reason": "ok"}
 
     except Exception as e:
         logger.error(f"Chat generation error: {e}")

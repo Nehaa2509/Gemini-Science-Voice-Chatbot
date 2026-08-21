@@ -9,7 +9,9 @@ const AppState = {
   activeChatId: null,
   chats: {}, // { id: { id, title, persona, messages: [], createdAt } }
   apiKey: localStorage.getItem("aether_gemini_api_key") || "",
-  model: localStorage.getItem("aether_gemini_model") || "gemini-1.5-flash",
+  model: ["gemini-3.7-flash", "gemini-3.6-flash"].includes(localStorage.getItem("aether_gemini_model"))
+    ? localStorage.getItem("aether_gemini_model")
+    : "gemini-3.7-flash",
   temperature: parseFloat(localStorage.getItem("aether_temperature") || "0.7"),
   ttsEngine: localStorage.getItem("aether_tts_engine") || "browser",
   voiceRate: parseFloat(localStorage.getItem("aether_voice_rate") || "1.0"),
@@ -1068,7 +1070,7 @@ async function testApiKeyConnection() {
       body: JSON.stringify({
         message: "Hi",
         persona: "general",
-        model: AppState.model || "gemini-1.5-flash",
+        model: AppState.model || "gemini-3.7-flash",
         temperature: 0.1,
         history: [],
         stream: false
@@ -1427,6 +1429,12 @@ document.addEventListener("DOMContentLoaded", () => {
     switchActiveChat(chatIds[chatIds.length - 1]);
   } else {
     createNewChat();
+  }
+
+  localStorage.setItem("aether_gemini_model", AppState.model);
+  if (elements.modelSelect) elements.modelSelect.value = AppState.model;
+  if (elements.headerModelPill && elements.modelSelect && elements.modelSelect.selectedIndex >= 0) {
+    elements.headerModelPill.textContent = elements.modelSelect.options[elements.modelSelect.selectedIndex].text.split("(")[0].trim();
   }
 
   updateApiStatusUI();

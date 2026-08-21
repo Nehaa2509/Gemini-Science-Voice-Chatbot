@@ -5,6 +5,13 @@ import re
 import random
 import tempfile
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from dotenv import load_dotenv
 import google.generativeai as genai
 from gtts import gTTS
@@ -61,7 +68,7 @@ system_instruction = (
 )
 
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-3.7-flash",
     # you can also set generation_config and safety_settings here if desired
 )
 
