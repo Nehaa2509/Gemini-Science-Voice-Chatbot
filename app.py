@@ -22,7 +22,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from gtts import gTTS
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -151,16 +152,22 @@ _TRANSIENT_CODES = {"503", "500", "504"}
 _QUOTA_MARKERS = {"quota", "PERMISSION_DENIED", "API_KEY_INVALID", "429", "limit: 0"}
 
 
-async def call_gemini_with_retry(chat_session, message: str, stream: bool = False, max_attempts: int = 3):
-    """Send a Gemini message with exponential backoff on transient server errors.
+def temperature_to_thinking_level(temp: float) -> str:
+    """Map UI temperature slider (0.0-1.0) to Gemini 3.x thinking_level ('LOW', 'MEDIUM', 'HIGH')."""
+    if temp <= 0.3:
+        return "LOW"
+    elif temp <= 0.7:
+        return "MEDIUM"
+    else:
+        return "HIGH"
 
-    - Raises immediately on quota / auth failures (not worth retrying).
-    - Retries up to max_attempts on transient 5xx-style errors with jittered backoff.
-    """
+
+async def call_gemini_with_retry(api_fn, max_attempts: int = 3):
+    """Execute a Gemini API callable with exponential backoff on transient server errors."""
     last_exc: Exception = RuntimeError("No attempts made")
     for attempt in range(1, max_attempts + 1):
         try:
-            return chat_session.send_message(message, stream=stream)
+            return api_fn()
         except Exception as exc:
             last_exc = exc
             err_name = type(exc).__name__
@@ -323,42 +330,51 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
 
     # ── Real Gemini call with retry/backoff ───────────────────────────────────
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
+        thinking_lvl = temperature_to_thinking_level(body.temperature)
 
-        history_contents = []
+        contents = []
         for item in body.history[-12:]:  # keep last 12 messages for context
             role = "user" if item.role == "user" else "model"
-            history_contents.append({"role": role, "parts": [item.content]})
+            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=item.content)]))
+        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=body.message)]))
 
-        def get_chat_session(model_to_use: str):
-            g_model = genai.GenerativeModel(
-                model_name=model_to_use,
+        def create_gen_config():
+            return types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=body.temperature,
-                    max_output_tokens=3000,
-                )
+                thinking_config=types.ThinkingConfig(thinking_level=thinking_lvl),
+                max_output_tokens=3000,
             )
-            return g_model.start_chat(history=history_contents)
 
-        chat_session = get_chat_session(active_model_name)
+        gen_config = create_gen_config()
 
         if body.stream:
             async def sse_generator():
-                nonlocal chat_session, active_model_name
+                nonlocal active_model_name, gen_config
                 try:
                     try:
-                        response = await call_gemini_with_retry(chat_session, body.message, stream=True)
+                        response_stream = await call_gemini_with_retry(
+                            lambda: client.models.generate_content_stream(
+                                model=active_model_name,
+                                contents=contents,
+                                config=gen_config,
+                            )
+                        )
                     except Exception as model_err:
                         if "404" in str(model_err) or "not found" in str(model_err).lower():
                             logger.warning(f"Model {active_model_name} failed with 404. Falling back to gemini-3.7-flash.")
                             active_model_name = "gemini-3.7-flash"
-                            chat_session = get_chat_session(active_model_name)
-                            response = await call_gemini_with_retry(chat_session, body.message, stream=True)
+                            response_stream = await call_gemini_with_retry(
+                                lambda: client.models.generate_content_stream(
+                                    model=active_model_name,
+                                    contents=contents,
+                                    config=gen_config,
+                                )
+                            )
                         else:
                             raise
 
-                    for chunk in response:
+                    for chunk in response_stream:
                         if chunk.text:
                             payload = json.dumps({"text": chunk.text, "done": False})
                             yield f"data: {payload}\n\n"
@@ -370,13 +386,24 @@ async def chat_endpoint(request: Request, body: ChatRequest, x_gemini_api_key: O
             return StreamingResponse(sse_generator(), media_type="text/event-stream")
         else:
             try:
-                response = await call_gemini_with_retry(chat_session, body.message, stream=False)
+                response = await call_gemini_with_retry(
+                    lambda: client.models.generate_content(
+                        model=active_model_name,
+                        contents=contents,
+                        config=gen_config,
+                    )
+                )
             except Exception as model_err:
                 if "404" in str(model_err) or "not found" in str(model_err).lower():
                     logger.warning(f"Model {active_model_name} failed with 404. Falling back to gemini-3.7-flash.")
                     active_model_name = "gemini-3.7-flash"
-                    chat_session = get_chat_session(active_model_name)
-                    response = await call_gemini_with_retry(chat_session, body.message, stream=False)
+                    response = await call_gemini_with_retry(
+                        lambda: client.models.generate_content(
+                            model=active_model_name,
+                            contents=contents,
+                            config=gen_config,
+                        )
+                    )
                 else:
                     raise
             return {"response": response.text, "model": active_model_name, "demo_mode": False, "reason": "ok"}
